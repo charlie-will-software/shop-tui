@@ -1,17 +1,23 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+	"sync"
+
+	"github.com/gin-gonic/gin"
 
 	"charlie-will-software/shop-tui/api/model"
 )
 
-var items = []model.Item{
-	{Id: 1, Title: "Bread", Price: 1.09},
-	{Id: 2, Title: "Milk", Price: 1.5},
-}
+// Seed the items array with data
+var (
+	items = []model.Item{
+		{Id: 1, Title: "Bread", Price: 1.09},
+		{Id: 2, Title: "Milk", Price: 1.5},
+	}
+	mu sync.Mutex
+)
 
 func main() {
 	router := gin.Default()
@@ -30,6 +36,8 @@ func index(c *gin.Context) {
 }
 
 func getItems(c *gin.Context) {
+	mu.Lock()
+	defer mu.Unlock()
 	c.IndentedJSON(http.StatusOK, items)
 }
 
@@ -41,6 +49,8 @@ func getItemById(c *gin.Context) {
 		return
 	}
 
+	mu.Lock()
+	defer mu.Unlock()
 	// Find an Item with the correct Id.
 	for _, a := range items {
 		if a.Id == idInt {
@@ -65,6 +75,8 @@ func addItem(c *gin.Context) {
 		return
 	}
 
+	mu.Lock()
 	items = append(items, newItem)
+	mu.Unlock()
 	c.IndentedJSON(http.StatusCreated, newItem)
 }

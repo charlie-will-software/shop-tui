@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 
 	"charlie-will-software/shop-tui/api/model"
 )
@@ -16,6 +17,7 @@ func main() {
 	router := gin.Default()
 	router.GET("/", index)
 	router.GET("/items", getItems)
+	router.GET("/items/:id", getItemById)
 	router.POST("/items", addItem)
 
 	router.Run("0.0.0.0:8080")
@@ -29,6 +31,25 @@ func index(c *gin.Context) {
 
 func getItems(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, items)
+}
+
+func getItemById(c *gin.Context) {
+	id := c.Param("id")
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid item ID"})
+		return
+	}
+
+	// Find an Item with the correct Id.
+	for _, a := range items {
+		if a.Id == idInt {
+			c.IndentedJSON(http.StatusOK, a)
+			return
+		}
+	}
+
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "item not found"})
 }
 
 func addItem(c *gin.Context) {

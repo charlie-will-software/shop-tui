@@ -16,6 +16,7 @@ func main() {
 	router := gin.Default()
 	router.GET("/", index)
 	router.GET("/items", getItems)
+	router.POST("/items", addItem)
 
 	router.Run("0.0.0.0:8080")
 }
@@ -28,4 +29,21 @@ func index(c *gin.Context) {
 
 func getItems(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, items)
+}
+
+func addItem(c *gin.Context) {
+	var newItem model.Item
+
+	if err := c.BindJSON(&newItem); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid request"})
+		return
+	}
+
+	if newItem.Title == "" || newItem.Price <= 0 {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid item data"})
+		return
+	}
+
+	items = append(items, newItem)
+	c.IndentedJSON(http.StatusCreated, newItem)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 
@@ -21,12 +22,21 @@ var (
 
 func main() {
 	router := gin.Default()
+
 	router.GET("/", index)
 	router.GET("/items", getItems)
 	router.GET("/items/:id", getItemById)
 	router.POST("/items", addItem)
 
-	router.Run("0.0.0.0:8080")
+	address := getEnv("SERVER_ADDRESS", "0.0.0.0:8080")
+	router.Run(address)
+}
+
+func getEnv(key, defaultValue string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return defaultValue
 }
 
 func index(c *gin.Context) {

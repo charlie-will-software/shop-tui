@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"os"
 	"strconv"
@@ -27,6 +28,7 @@ func main() {
 	router.GET("/items", getItems)
 	router.GET("/items/:id", getItemById)
 	router.POST("/items", addItem)
+	router.DELETE("/items/:id", deleteItem)
 
 	address := getEnv("SERVER_ADDRESS", "0.0.0.0:8080")
 	router.Run(address)
@@ -37,6 +39,19 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func getItemIndexById(id int) (int, error) {
+	mu.Lock()
+	defer mu.Unlock()
+	// Find an Item with the correct Id.
+	for i, a := range items {
+		if a.Id == id {
+			return i, nil
+		}
+	}
+
+	return 0, errors.New("item with id not found")
 }
 
 func index(c *gin.Context) {
@@ -89,4 +104,27 @@ func addItem(c *gin.Context) {
 	items = append(items, newItem)
 	mu.Unlock()
 	c.IndentedJSON(http.StatusCreated, newItem)
+}
+
+func deleteItem(c *gin.Context) {
+	id := c.Param("id")
+	idInt, err := strconv.Atoi(id)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid item ID"})
+		return
+	}
+
+	i, err := getItemIndexById(idInt)
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "item not found"})
+		return
+	}
+
+	mu.Lock()
+	deletedItem := items[i]
+	items = append(items[:i], items[i+1:]...)
+	mu.Unlock()
+
+	c.IndentedJSON(http.StatusOK, deletedItem)
 }

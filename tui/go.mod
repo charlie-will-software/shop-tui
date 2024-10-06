@@ -1,4 +1,4 @@
-module tui
+module charlie-will-software/shop-tui/tui
 
 go 1.22.6
 

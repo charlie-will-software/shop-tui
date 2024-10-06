@@ -3,8 +3,12 @@ package main
 import (
 	"fmt"
 	"os"
+  "log"
 
 	tea "github.com/charmbracelet/bubbletea"
+
+  "charlie-will-software/shop-tui/tui/requests"
+
 )
 
 type model struct {
@@ -61,8 +65,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.active = false
 					m.cursor = 0 // Reset cursor when returning to the main menu
 				} else {
-					// Add behavior for submenu selections here if needed
 					fmt.Println("Submenu option selected:", m.submenu[m.cursor])
+          switch m.submenu[m.cursor] {
+          case "View All":
+            items, err := requests.GetItems()
+            if err != nil {
+		          log.Fatalf("Error getting items: %v", err)
+	          }
+          	fmt.Println("Items:", items)
+          }
 				}
 			} else {
 				// Activate submenu based on the main menu selection

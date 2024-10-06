@@ -1,0 +1,18 @@
+meta {
+  name: Update item
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{base_url}}/items/1
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "title": "New Bread",
+    "price": 1.99
+  }
+}

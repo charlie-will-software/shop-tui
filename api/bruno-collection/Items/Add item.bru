@@ -1,0 +1,19 @@
+meta {
+  name: Add item
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/items
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "id": 3,
+    "title": "Apple",
+    "price": 0.15
+  }
+}

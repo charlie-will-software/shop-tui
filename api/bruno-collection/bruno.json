@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "Shop-TUI",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

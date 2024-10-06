@@ -29,6 +29,7 @@ func main() {
 	router.GET("/items/:id", getItemById)
 	router.POST("/items", addItem)
 	router.DELETE("/items/:id", deleteItem)
+	router.PATCH("/items/:id", updateItem)
 
 	address := getEnv("SERVER_ADDRESS", "0.0.0.0:8080")
 	router.Run(address)
@@ -104,6 +105,41 @@ func addItem(c *gin.Context) {
 	items = append(items, newItem)
 	mu.Unlock()
 	c.IndentedJSON(http.StatusCreated, newItem)
+}
+
+func updateItem(c *gin.Context) {
+	id := c.Param("id")
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "invalid item ID"})
+		return
+	}
+
+	var updatedItem model.Item
+	if err := c.ShouldBindJSON(&updatedItem); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	i, err := getItemIndexById(idInt)
+	if err != nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "item not found"})
+		return
+	}
+
+	mu.Lock()
+	item := items[i]
+	if updatedItem.Title != "" {
+		item.Title = updatedItem.Title
+	}
+	if updatedItem.Price != 0 {
+		item.Price = updatedItem.Price
+	}
+	items[i] = item
+	mu.Unlock()
+
+	c.IndentedJSON(http.StatusOK, item)
+
 }
 
 func deleteItem(c *gin.Context) {

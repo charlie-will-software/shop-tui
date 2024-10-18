@@ -5,103 +5,119 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
+	"time"
 
   "charlie-will-software/shop-tui/tui/requests/model"
-  
 )
 
-// BaseURL is the URL where the API server is running.
-var BaseURL = "http://localhost:8080"
+var (
+  BaseURL   = "http://localhost:8080"
+	httpClient = &http.Client{
+		Timeout: 10 * time.Second, // Set a timeout for requests
+	}
+)
 
-// GetIndex sends a GET request to the root endpoint ("/").
+// Helper function to check response status code
+func checkResponse(resp *http.Response, expectedStatusCode int) error {
+	if resp.StatusCode != expectedStatusCode {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// Helper function to decode JSON response
+func decodeJSON(body io.ReadCloser, target interface{}) error {
+	defer body.Close()
+	decoder := json.NewDecoder(body)
+	if err := decoder.Decode(target); err != nil {
+		return fmt.Errorf("failed to decode response body: %w", err)
+	}
+	return nil
+}
+
+// GetIndex fetches the index page from the base URL
 func GetIndex() (string, error) {
-	resp, err := http.Get(BaseURL + "/")
+	resp, err := httpClient.Get(BaseURL + "/")
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to fetch index: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	if err := checkResponse(resp, http.StatusOK); err != nil {
+		return "", err
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	return string(body), nil
 }
 
-// GetItems sends a GET request to the "/items" endpoint and returns all items.
+// GetItems fetches all items from the "/items" endpoint
 func GetItems() ([]model.Item, error) {
-	resp, err := http.Get(BaseURL + "/items")
+	resp, err := httpClient.Get(BaseURL + "/items")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch items: %w", err)
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	if err := checkResponse(resp, http.StatusOK); err != nil {
+		return nil, err
 	}
 
 	var items []model.Item
-	err = json.NewDecoder(resp.Body).Decode(&items)
-	if err != nil {
+	if err := decodeJSON(resp.Body, &items); err != nil {
 		return nil, err
 	}
 
 	return items, nil
 }
 
-// GetItemByID sends a GET request to the "/items/:id" endpoint to fetch a specific item by ID.
+// GetItemByID fetches a specific item by ID from the "/items/:id" endpoint
 func GetItemByID(id int) (*model.Item, error) {
-	resp, err := http.Get(BaseURL + "/items/" + strconv.Itoa(id))
+	resp, err := httpClient.Get(BaseURL + "/items/" + strconv.Itoa(id))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to fetch item with ID %d: %w", id, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, errors.New("item not found")
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	if err := checkResponse(resp, http.StatusOK); err != nil {
+		return nil, err
 	}
 
 	var item model.Item
-	err = json.NewDecoder(resp.Body).Decode(&item)
-	if err != nil {
+	if err := decodeJSON(resp.Body, &item); err != nil {
 		return nil, err
 	}
 
 	return &item, nil
 }
 
-// AddItem sends a POST request to the "/items" endpoint to add a new item.
+// AddItem sends a POST request to the "/items" endpoint to add a new item
 func AddItem(newItem model.Item) (*model.Item, error) {
 	itemData, err := json.Marshal(newItem)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal item: %w", err)
 	}
 
-	resp, err := http.Post(BaseURL+"/items", "application/json", bytes.NewBuffer(itemData))
+	resp, err := httpClient.Post(BaseURL+"/items", "application/json", bytes.NewBuffer(itemData))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to send request to add item: %w", err)
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusCreated {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	if err := checkResponse(resp, http.StatusCreated); err != nil {
+		return nil, err
 	}
 
 	var createdItem model.Item
-	err = json.NewDecoder(resp.Body).Decode(&createdItem)
-	if err != nil {
+	if err := decodeJSON(resp.Body, &createdItem); err != nil {
 		return nil, err
 	}
 

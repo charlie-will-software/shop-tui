@@ -3,140 +3,123 @@ package main
 import (
 	"fmt"
 	"os"
-  "log"
 
 	tea "github.com/charmbracelet/bubbletea"
-
-  "charlie-will-software/shop-tui/tui/requests"
-
 )
 
-type model struct {
-	choices  []string          // Main menu items
-	cursor   int               // Cursor position
-	selected map[int]struct{}  // Selected items
-	submenu  []string          // Current submenu items
-	active   bool              // Whether a submenu is active
+type MenuNode struct {
+	title    string
+	children []*MenuNode
+	parent   *MenuNode
 }
 
-func initialModel() model {
-	return model{
-		choices:  []string{"View Records", "Create Records", "Delete Records"},
-		selected: make(map[int]struct{}),
-		active:   false,
+type Model struct {
+	cursor   int
+	current  *MenuNode
+}
+
+// Define the menu tree structure
+func createMenuTree() *MenuNode {
+	// Main Menu
+	mainMenu := &MenuNode{title: "Main Menu"}
+
+	// Submenus
+	viewRecords := &MenuNode{title: "View Records", parent: mainMenu}
+	createRecords := &MenuNode{title: "Create Records", parent: mainMenu}
+	deleteRecords := &MenuNode{title: "Delete Records", parent: mainMenu}
+
+	// View Records Submenu
+	viewAll := &MenuNode{title: "View All", parent: viewRecords}
+	searchByID := &MenuNode{title: "Search By ID", parent: viewRecords}
+	backFromView := &MenuNode{title: "Back", parent: viewRecords}
+	viewRecords.children = []*MenuNode{viewAll, searchByID, backFromView}
+
+	// Create Records Submenu
+	addNewRecord := &MenuNode{title: "Add New Record", parent: createRecords}
+	importRecords := &MenuNode{title: "Import Records", parent: createRecords}
+	backFromCreate := &MenuNode{title: "Back", parent: createRecords}
+	createRecords.children = []*MenuNode{addNewRecord, importRecords, backFromCreate}
+
+	// Delete Records Submenu
+	deleteByID := &MenuNode{title: "Delete By ID", parent: deleteRecords}
+	clearAll := &MenuNode{title: "Clear All Records", parent: deleteRecords}
+	backFromDelete := &MenuNode{title: "Back", parent: deleteRecords}
+	deleteRecords.children = []*MenuNode{deleteByID, clearAll, backFromDelete}
+
+	// Add submenus to main menu
+	mainMenu.children = []*MenuNode{viewRecords, createRecords, deleteRecords}
+
+	return mainMenu
+}
+
+func initialModel() Model {
+	return Model{
+		cursor:  0,
+		current: createMenuTree(),
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
 
-		case "ctrl+c", "q":
-			// Exit if we're in the main menu or close the submenu if active
-			if m.active {
-				m.active = false
-				m.cursor = 0 // Reset cursor when returning to main menu
-			} else {
-				return m, tea.Quit
-			}
-
-		case "up", "k":
-			// Navigate up in the current menu
+		case "up":
 			if m.cursor > 0 {
 				m.cursor--
 			}
 
-		case "down", "j":
-			// Navigate down in the current menu
-			if m.cursor < len(m.getCurrentChoices())-1 {
+		case "down":
+			if m.cursor < len(m.current.children)-1 {
 				m.cursor++
 			}
 
-		case "enter", " ":
-			if m.active {
-				// Handle submenu selections
-				if m.cursor == len(m.submenu)-1 { // Check if "Back" is selected (last item in submenu)
-					m.active = false
-					m.cursor = 0 // Reset cursor when returning to the main menu
-				} else {
-					fmt.Println("Submenu option selected:", m.submenu[m.cursor])
-          switch m.submenu[m.cursor] {
-          case "View All":
-            items, err := requests.GetItems()
-            if err != nil {
-		          log.Fatalf("Error getting items: %v", err)
-	          }
-          	fmt.Println("Items:", items)
-          }
-				}
-			} else {
-				// Activate submenu based on the main menu selection
-				switch m.cursor {
-				case 0: // View Records submenu
-					m.submenu = []string{"View All", "Search by ID", "Back"}
-					m.active = true
-				case 1: // Create Records submenu
-					m.submenu = []string{"Add New Record", "Import Records", "Back"}
-					m.active = true
-				case 2: // Delete Records submenu
-					m.submenu = []string{"Delete by ID", "Clear All Records", "Back"}
-					m.active = true
-				}
-				m.cursor = 0 // Reset cursor for the submenu
+		case "enter":
+			selected := m.current.children[m.cursor]
+			if selected.title == "Back" {
+				m.current = m.current.parent
+				m.cursor = 0
+			} else if len(selected.children) > 0 {
+				m.current = selected
+				m.cursor = 0
 			}
+
+		case "q":
+			return m, tea.Quit
 		}
 	}
 
 	return m, nil
 }
 
-func (m model) View() string {
-	s := ""
+func (m Model) View() string {
+	var output string
 
-	if m.active {
-		// Render the submenu
-		s += "Submenu:\n\n"
-		for i, choice := range m.submenu {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-			s += fmt.Sprintf("%s %s\n", cursor, choice)
+	// Display the current menu title
+	output += fmt.Sprintf("%s:\n", m.current.title)
+
+	// Display each menu item with a cursor
+	for i, child := range m.current.children {
+		cursor := " " // no cursor
+		if m.cursor == i {
+			cursor = ">" // current cursor
 		}
-	} else {
-		// Render the main menu
-		s += "Main Menu:\n\n"
-		for i, choice := range m.choices {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-			s += fmt.Sprintf("%s %s\n", cursor, choice)
-		}
+		output += fmt.Sprintf("%s %s\n", cursor, child.title)
 	}
 
-	s += "\nPress q to quit. Press Enter to select.\n"
-	return s
-}
-
-// getCurrentChoices returns the current menu items based on the state
-func (m model) getCurrentChoices() []string {
-	if m.active {
-		return m.submenu
-	}
-	return m.choices
+	output += "\nPress q to quit.\n"
+	return output
 }
 
 func main() {
 	p := tea.NewProgram(initialModel())
-	if _, err := p.Run(); err != nil {
-		fmt.Printf("Alas, there's been an error: %v", err)
+	if err := p.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v", err)
 		os.Exit(1)
 	}
 }

@@ -2,6 +2,7 @@ package requests
 
 import (
     "net/http"
+    "bytes"
     "time"
     "log"
     "encoding/json"
@@ -71,4 +72,26 @@ func GetItemById(id string) (Item){
     
 }
 
+func AddItem(id int, title string, price float64) (is_added bool){
+    //var item = Item{id,title,price}
 
+
+    var values = Item{id,title,price}
+    json_data, err := json.Marshal(values)
+
+    if err != nil {
+        return false //TODO: Add more detailed error messaging
+    }
+
+    resp, err := httpClient.Post(BaseURL + "/items", "applicaiton/json", bytes.NewBuffer(json_data))
+    defer resp.Body.Close()
+
+    if err != nil{
+        return false //TODO add more detailed error messaging
+    }
+
+    return true
+}
+
+//TODO: Delete Item
+//TODO: Update Item

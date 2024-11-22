@@ -118,13 +118,37 @@ func CreateAddItemPage(pages *tview.Pages){
 }
 
 func CreateDeleteItemPage(pages *tview.Pages){
+
+    idInputField := tview.NewInputField().
+    SetLabel("Id:").
+    SetFieldWidth(20).
+    SetAcceptanceFunc(tview.InputFieldInteger)
+
+    textView := tview.NewTextView()
+
     deleteItemForm := tview.NewForm().
-    AddInputField("ID to delete", "", 19, nil, nil).
-    AddButton("Check For Item",nil).
-    AddButton("Delete", nil).
+    AddFormItem(idInputField).
+    AddButton("Check For Item",func(){
+        id := idInputField.GetText()
+        if (requests.Item{} == requests.GetItemById(id)){
+            textView.SetText("Item "+ id + " is not available")
+        } else {
+            textView.SetText("Item " + id + " exists")
+        }
+    }).
+    AddButton("Delete", func() {
+        id := idInputField.GetText()
+        if (requests.DeleteItem(id)){
+            textView.SetText("Item with id " + id + " deleted")
+        } else{
+            textView.SetText("Could not delete item with id " + id)
+        }
+    }).
     AddButton("Quit", func(){
-        pages.SwitchToPage("Main Menu") 
-    })
+        textView.SetText("")
+        pages.SwitchToPage("Main Menu")
+    }).
+    AddFormItem(textView)
     pages.AddPage("Delete Item Form", deleteItemForm, true, false)
 }
 

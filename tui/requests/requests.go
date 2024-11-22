@@ -86,12 +86,25 @@ func AddItem(id int, title string, price float64) (is_added bool){
     resp, err := httpClient.Post(BaseURL + "/items", "applicaiton/json", bytes.NewBuffer(json_data))
     defer resp.Body.Close()
 
-    if err != nil{
-        return false //TODO add more detailed error messaging
-    }
+    return err == nil
 
-    return true
+     //TODO add more detailed error messaging
 }
 
-//TODO: Delete Item
+func DeleteItem(id string) (is_deleted bool){
+
+    // create request
+    req, err := http.NewRequest("DELETE", BaseURL + "/items/" + id,nil)
+    if err != nil{
+        return false //TODO: add more detailed error messaging
+    }
+
+    resp, err:= httpClient.Do(req)
+    defer resp.Body.Close()
+    if err != nil {
+        return false
+    }
+    return true
+
+}
 //TODO: Update Item

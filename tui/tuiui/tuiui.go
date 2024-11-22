@@ -23,40 +23,7 @@ func CreateViewAllItemsPage(pages *tview.Pages) {
         return
     }
 
-    //create table
-    table := tview.
-    NewTable().
-    SetBorders(true).
-    SetDoneFunc(func(key tcell.Key) {
-        pages.SwitchToPage("Main Menu")
-    })
-
-    // add to items table
-    for r := 0; r < rows; r++ {
-        curr_row := items[r]
-        table.SetCell(r, 0,
-        tview.NewTableCell(strconv.Itoa(curr_row.Id)).//fmt.Sprintf("%f",curr_row.Id)).
-        SetAlign(tview.AlignCenter))
-        table.SetCell(r, 1,
-        tview.NewTableCell(string(curr_row.Title)).
-        SetAlign(tview.AlignCenter))
-        table.SetCell(r, 2,
-        tview.NewTableCell(fmt.Sprintf("%.2f",curr_row.Price)).
-        SetAlign(tview.AlignCenter))
-    }
-
-
-    table.Select(0, 0).SetFixed(1, 1).SetDoneFunc(func(key tcell.Key) {
-        if (key == tcell.KeyEscape) {
-            pages.SwitchToPage("Main Menu") 
-        } else if (key == tcell.KeyEnter) {
-            table.SetSelectable(true, true)
-        }
-    }).SetSelectedFunc(func(row int, column int) {
-        table.GetCell(row, column).SetTextColor(tcell.ColorRed)
-        table.SetSelectable(false, false)
-    })
-
+    table := createAllItemTable(items,pages)
 
     pages.AddAndSwitchToPage("ViewAllResponse",table,false)
 }
@@ -113,16 +80,75 @@ func CreateGetById(pages *tview.Pages){
     SetLabel("Enter ID Number:").
     SetFieldWidth(19)
 
+
     getByIdInputForm := tview.NewForm().
     AddFormItem(getByIdInputField).
     AddButton("Find Item", func(){
-        item := request.GetItemById(getByIDInputField.GetText())
-        
+        item := requests.GetItemById(getByIdInputField.GetText())
+        table:= createGetByIdItemTable(item, pages)
+        pages.AddAndSwitchToPage("ViewAllResponse",table,false)
     }).
     AddButton("Back", func() {
         pages.SwitchToPage("Main Menu")
     })
 
 
-    pages.AddPage("Get By Id", getByIdInputForm, true, false)
+    pages.AddPage("Get By Id Form", getByIdInputForm, true, false)
+}
+
+func createAllItemTable(items []requests.Item, pages *tview.Pages) (*tview.Table) {
+    
+    table := createEmptyItemTable(pages)
+    rows := len(items)
+
+    // add to items table
+    for r := 0; r < rows; r++ {
+        curr_row := items[r]
+        table.SetCell(r, 0,
+        tview.NewTableCell(strconv.Itoa(curr_row.Id)).//fmt.Sprintf("%f",curr_row.Id)).
+        SetAlign(tview.AlignCenter))
+        table.SetCell(r, 1,
+        tview.NewTableCell(string(curr_row.Title)).
+        SetAlign(tview.AlignCenter))
+        table.SetCell(r, 2,
+        tview.NewTableCell(fmt.Sprintf("%.2f",curr_row.Price)).
+        SetAlign(tview.AlignCenter))
+    }
+
+    return table
+}
+
+func createGetByIdItemTable(item requests.Item,pages *tview.Pages) (*tview.Table) {
+
+    table:= createEmptyItemTable(pages)
+    table.SetCell(0,0,
+    tview.NewTableCell(strconv.Itoa(item.Id)).//fmt.Sprintf("%f",curr_row.Id)).
+    SetAlign(tview.AlignCenter))
+    table.SetCell(0, 1,
+    tview.NewTableCell(string(item.Title)).
+    SetAlign(tview.AlignCenter))
+    table.SetCell(0, 2,
+    tview.NewTableCell(fmt.Sprintf("%.2f",item.Price)).
+    SetAlign(tview.AlignCenter))
+
+
+    return table
+}
+
+func createEmptyItemTable(pages *tview.Pages) (*tview.Table){
+
+    table := tview.NewTable().SetBorders(true)
+    table.Select(0, 0).SetFixed(1, 1).SetDoneFunc(func(key tcell.Key) {
+        if (key == tcell.KeyEscape) {
+            pages.SwitchToPage("Main Menu") 
+        } else if (key == tcell.KeyEnter) {
+            table.SetSelectable(true, true)
+        }
+    }).SetSelectedFunc(func(row int, column int) {
+        table.GetCell(row, column).SetTextColor(tcell.ColorRed)
+        table.SetSelectable(false, false)
+    })
+
+
+    return table
 }

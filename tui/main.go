@@ -23,7 +23,7 @@ func main() {
             tuiui.CreateViewAllItemsPage(pages)
         }).
         AddItem("Get Item By Id", "View singular item", 'b', func() {
-            pages.SwitchToPage("Get By ID")
+            pages.SwitchToPage("Get By Id Form")
         }).
         AddItem("Add Item", "Add item to database", 'c', func() {
             pages.SwitchToPage("Add Item Form")

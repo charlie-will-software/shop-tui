@@ -15,21 +15,58 @@ type Item struct {
 }
 
 func CreateViewAllItemsPage(pages *tview.Pages) {
-
-    // get items, if non available return
+    // get items and create table, if non available return
     items := requests.GetItems()
     rows := len(items)
     if rows == 0{
-        return
+        textView := tview.NewTextView().
+        SetText("No Data Found").
+        SetDoneFunc(func(key tcell.Key) {
+            if (key == tcell.KeyEscape) {
+                pages.SwitchToPage("Main Menu") 
+            }
+        })
+        pages.AddAndSwitchToPage("NoDataFoundNotice",textView,false)
+
     }
 
     table := createAllItemTable(items,pages)
-
     pages.AddAndSwitchToPage("ViewAllResponse",table,false)
 }
 
+func CreateGetById(pages *tview.Pages){
+    getByIdInputField := tview.NewInputField().
+    SetLabel("Enter ID Number:").
+    SetFieldWidth(19)
+    
+    textView := tview.NewTextView()
+
+    getByIdInputForm := tview.NewForm().
+    AddFormItem(getByIdInputField).
+    AddButton("Find Item", func(){
+        id_to_get :=getByIdInputField.GetText() 
+        item := requests.GetItemById(id_to_get)
+
+        //check if request empty
+        if (requests.Item{} == item){
+            textView.SetText("No item found for id: " +id_to_get) 
+        } else {
+            table:= createGetByIdItemTable(item, pages)
+            textView.SetText("") 
+            pages.AddAndSwitchToPage("ViewAllResponse",table,false)
+        }
+    }).
+    AddButton("Back", func() {
+        pages.SwitchToPage("Main Menu")
+    }).
+    AddFormItem(textView)
+
+
+    pages.AddPage("Get By Id Form", getByIdInputForm, true, false)
+}
 
 func CreateAddItemPage(pages *tview.Pages){
+    // Create form to add value to the view
 
     // Create fields that require reading so they can be referenced within form
     idInputField := tview.NewInputField().
@@ -44,23 +81,39 @@ func CreateAddItemPage(pages *tview.Pages){
     priceInputField := tview.NewInputField().
     SetLabel("Price:").
     SetFieldWidth(20).
+    //TODO: Change acceptance function to only allow 2d.p.
     SetAcceptanceFunc(tview.InputFieldFloat)
 
+    textView := tview.NewTextView()
 
-    // Create Form
+    // Create Add Form
     addItemForm := tview.NewForm().
     AddFormItem(idInputField).
     AddFormItem(nameInputField).
     AddFormItem(priceInputField).
-    AddButton("Save",func(){
+    AddButton("Add Item",func(){
         id := idInputField.GetText()
+        id_int , err_id := strconv.Atoi(id)
         name := nameInputField.GetText()
         price := priceInputField.GetText()
-        fmt.Printf("Form Data:\nID: %s\nName: %s\nPrice: %s\n", id, name, price)
+        price_float, err_price := strconv.ParseFloat(price,64)
+
+        if (err_id != nil) {
+            textView.SetText("Could not convert id " + id + " to integer")
+        } else if (err_price != nil) {
+            textView.SetText("Could not convert price " + price + " to float")
+        } else{ 
+            if (requests.AddItem(id_int, name, price_float)){
+                textView.SetText("Item added!")           
+            } else {
+                textView.SetText("Could not add item.")
+            }
+        }
     }).
     AddButton("Quit", func(){
         pages.SwitchToPage("Main Menu") 
-    })      
+    }).
+    AddFormItem(textView)
     pages.AddPage("Add Item Form", addItemForm, true, false)
 }
 
@@ -75,62 +128,23 @@ func CreateDeleteItemPage(pages *tview.Pages){
     pages.AddPage("Delete Item Form", deleteItemForm, true, false)
 }
 
-func CreateGetById(pages *tview.Pages){
-    getByIdInputField := tview.NewInputField().
-    SetLabel("Enter ID Number:").
-    SetFieldWidth(19)
-
-
-    getByIdInputForm := tview.NewForm().
-    AddFormItem(getByIdInputField).
-    AddButton("Find Item", func(){
-        item := requests.GetItemById(getByIdInputField.GetText())
-        table:= createGetByIdItemTable(item, pages)
-        pages.AddAndSwitchToPage("ViewAllResponse",table,false)
-    }).
-    AddButton("Back", func() {
-        pages.SwitchToPage("Main Menu")
-    })
-
-
-    pages.AddPage("Get By Id Form", getByIdInputForm, true, false)
-}
-
 func createAllItemTable(items []requests.Item, pages *tview.Pages) (*tview.Table) {
-    
+
     table := createEmptyItemTable(pages)
-    rows := len(items)
 
     // add to items table
-    for r := 0; r < rows; r++ {
+    for r := 0; r < len(items); r++ {
         curr_row := items[r]
-        table.SetCell(r, 0,
-        tview.NewTableCell(strconv.Itoa(curr_row.Id)).//fmt.Sprintf("%f",curr_row.Id)).
-        SetAlign(tview.AlignCenter))
-        table.SetCell(r, 1,
-        tview.NewTableCell(string(curr_row.Title)).
-        SetAlign(tview.AlignCenter))
-        table.SetCell(r, 2,
-        tview.NewTableCell(fmt.Sprintf("%.2f",curr_row.Price)).
-        SetAlign(tview.AlignCenter))
+        addItemRowToTable(table,curr_row,r)
     }
 
     return table
 }
 
 func createGetByIdItemTable(item requests.Item,pages *tview.Pages) (*tview.Table) {
-
     table:= createEmptyItemTable(pages)
-    table.SetCell(0,0,
-    tview.NewTableCell(strconv.Itoa(item.Id)).//fmt.Sprintf("%f",curr_row.Id)).
-    SetAlign(tview.AlignCenter))
-    table.SetCell(0, 1,
-    tview.NewTableCell(string(item.Title)).
-    SetAlign(tview.AlignCenter))
-    table.SetCell(0, 2,
-    tview.NewTableCell(fmt.Sprintf("%.2f",item.Price)).
-    SetAlign(tview.AlignCenter))
 
+    addItemRowToTable(table, item, 0)
 
     return table
 }
@@ -151,4 +165,17 @@ func createEmptyItemTable(pages *tview.Pages) (*tview.Table){
 
 
     return table
+}
+
+func addItemRowToTable(table *tview.Table, item_to_add requests.Item, row int){
+    table.SetCell(row, 0,
+    tview.NewTableCell(strconv.Itoa(item_to_add.Id)).
+    SetAlign(tview.AlignCenter))
+    table.SetCell(row, 1,
+    tview.NewTableCell(string(item_to_add.Title)).
+    SetAlign(tview.AlignCenter))
+    table.SetCell(row, 2,
+    tview.NewTableCell(fmt.Sprintf("%.2f",item_to_add.Price)).
+    SetAlign(tview.AlignCenter))
+
 }

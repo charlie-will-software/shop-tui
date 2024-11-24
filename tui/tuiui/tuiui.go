@@ -15,10 +15,13 @@ type Item struct {
 }
 
 func CreateViewAllItemsPage(pages *tview.Pages) {
-    // get items and create table, if non available return
+    // Create view all items pages
     items := requests.GetItems()
     rows := len(items)
+
+
     if rows == 0{
+        // if no rows available display message
         textView := tview.NewTextView().
         SetText("No Data Found").
         SetDoneFunc(func(key tcell.Key) {
@@ -27,14 +30,15 @@ func CreateViewAllItemsPage(pages *tview.Pages) {
             }
         })
         pages.AddAndSwitchToPage("NoDataFoundNotice",textView,false)
-
+    } else {
+        // else create expected view for normal page
+        table := createAllItemTable(items,pages)
+        pages.AddAndSwitchToPage("ViewAllResponse",table,false)
     }
-
-    table := createAllItemTable(items,pages)
-    pages.AddAndSwitchToPage("ViewAllResponse",table,false)
 }
 
 func CreateGetById(pages *tview.Pages){
+    // create get by id form and add to 
     getByIdInputField := tview.NewInputField().
     SetLabel("Enter ID Number:").
     SetFieldWidth(19)
@@ -45,6 +49,10 @@ func CreateGetById(pages *tview.Pages){
     AddFormItem(getByIdInputField).
     AddButton("Find Item", func(){
         id_to_get :=getByIdInputField.GetText() 
+        if id_to_get == "" {
+            textView.SetText("Item Id must be entered before item can be found")
+            return
+        }
         item := requests.GetItemById(id_to_get)
 
         //check if request empty
@@ -66,7 +74,7 @@ func CreateGetById(pages *tview.Pages){
 }
 
 func CreateAddItemPage(pages *tview.Pages){
-    // Create form to add value to the view
+    // Create form to add value to the view and add it to the pages available
 
     // Create fields that require reading so they can be referenced within form
     idInputField := tview.NewInputField().
@@ -97,6 +105,17 @@ func CreateAddItemPage(pages *tview.Pages){
         name := nameInputField.GetText()
         price := priceInputField.GetText()
         price_float, err_price := strconv.ParseFloat(price,64)
+
+        if (id == ""){
+            textView.SetText("Id cannot be empty")
+            return
+        }else if name == ""{
+            textView.SetText("Name cannot be empty")
+            return
+        } else if price == ""{
+            textView.SetText("Price cannot be empty")
+            return
+        } 
 
         if (err_id != nil) {
             textView.SetText("Could not convert id " + id + " to integer")
@@ -130,7 +149,10 @@ func CreateDeleteItemPage(pages *tview.Pages){
     AddFormItem(idInputField).
     AddButton("Check For Item",func(){
         id := idInputField.GetText()
-        if (requests.Item{} == requests.GetItemById(id)){
+        if id == "" {
+            textView.SetText("Please enter the id to check if it exists")
+            
+        } else if (requests.Item{} == requests.GetItemById(id)){
             textView.SetText("Item "+ id + " is not available")
         } else {
             textView.SetText("Item " + id + " exists")
@@ -138,6 +160,9 @@ func CreateDeleteItemPage(pages *tview.Pages){
     }).
     AddButton("Delete", func() {
         id := idInputField.GetText()
+        if id == "" {
+            textView.SetText("Please enter and id that exists")
+        }
         if (requests.DeleteItem(id)){
             textView.SetText("Item with id " + id + " deleted")
         } else{
@@ -150,6 +175,75 @@ func CreateDeleteItemPage(pages *tview.Pages){
     }).
     AddFormItem(textView)
     pages.AddPage("Delete Item Form", deleteItemForm, true, false)
+}
+
+func CreateUpdateItemPage(pages *tview.Pages) {
+
+    idInputField := tview.NewInputField().
+    SetLabel("Id:").
+    SetFieldWidth(20).
+    SetAcceptanceFunc(tview.InputFieldInteger)
+
+    nameInputField := tview.NewInputField().
+    SetLabel("Name:").
+    SetFieldWidth(20)
+
+    priceInputField := tview.NewInputField().
+    SetLabel("Price:").
+    SetFieldWidth(20).
+    //TODO: Change acceptance function to only allow 2d.p.
+    SetAcceptanceFunc(tview.InputFieldFloat)
+
+
+    textView := tview.NewTextView()
+
+    updateItemForm := tview.NewForm().
+    AddFormItem(idInputField).
+    AddFormItem(nameInputField).
+    AddFormItem(priceInputField).
+    AddButton("Check For Item",func(){
+        id := idInputField.GetText()
+        if id == "" {
+            textView.SetText("Please enter the id to check if it exists")
+            
+        } else if (requests.Item{} == requests.GetItemById(id)){
+            textView.SetText("Item "+ id + " is not available")
+        } else {
+            textView.SetText("Item " + id + " exists")
+        }
+    }).
+    AddButton("Update Item",func(){
+        id := idInputField.GetText()
+        name := nameInputField.GetText()
+        price := priceInputField.GetText()
+        price_float, err_price := strconv.ParseFloat(price,64)
+
+        if (id == ""){
+            textView.SetText("Id cannot be empty")
+            return
+        }else if name == ""  && price == ""{
+            textView.SetText("Name and price cannot both be empty")
+            return
+        } 
+
+        if (err_price != nil && name == "") {
+            textView.SetText("Could not convert price " + price + " to float")
+        } else{
+            if name != "" {
+                requests.UpdateItemTitle(id, name)
+            }
+            if (price != ""){
+                requests.UpdateItemPrice(id, price_float)
+            } 
+        }
+    }).
+    AddButton("Quit", func(){
+        textView.SetText("")
+        pages.SwitchToPage("Main Menu")
+    }).
+    AddFormItem(textView)
+    pages.AddPage("Update Item Form", updateItemForm, true, false)
+
 }
 
 func createAllItemTable(items []requests.Item, pages *tview.Pages) (*tview.Table) {

@@ -16,6 +16,7 @@ func main() {
     tuiui.CreateAddItemPage(pages)
     tuiui.CreateDeleteItemPage(pages)
     tuiui.CreateGetById(pages)
+    tuiui.CreateUpdateItemPage(pages)
 
     // create initial list view
     list := tview.NewList().
@@ -30,6 +31,9 @@ func main() {
         }).
         AddItem("Delete Item", "Delete item from database", 'd', func() {
             pages.SwitchToPage("Delete Item Form")
+        }).
+        AddItem("Update Item", "Update item from database", 'd', func() {
+            pages.SwitchToPage("Update Item Form")
         }).
         AddItem("Quit", "Press to exit", 'q', func() {
             app.Stop()

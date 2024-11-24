@@ -83,7 +83,7 @@ func AddItem(id int, title string, price float64) (is_added bool){
         return false //TODO: Add more detailed error messaging
     }
 
-    resp, err := httpClient.Post(BaseURL + "/items", "applicaiton/json", bytes.NewBuffer(json_data))
+    resp, err := httpClient.Post(BaseURL + "/items", "application/json", bytes.NewBuffer(json_data))
     defer resp.Body.Close()
 
     return err == nil
@@ -101,10 +101,53 @@ func DeleteItem(id string) (is_deleted bool){
 
     resp, err:= httpClient.Do(req)
     defer resp.Body.Close()
-    if err != nil {
-        return false
-    }
-    return true
+
+    return err == nil 
 
 }
 //TODO: Update Item
+// Look at Bruno Commands and do patch?
+
+func UpdateItemTitle(id string, title string) (is_updated bool){
+
+    values := map[string]string{"title" : title}
+    json_data, err := json.Marshal(values)
+
+    if err != nil {
+        return false //TODO: Add more detailed error messaging
+    }
+
+    req, err := http.NewRequest("PATCH", BaseURL + "/items/" + id, bytes.NewBuffer(json_data))
+    req.Header.Set("Content-Type", "application/json")
+    if err != nil {
+        return false
+    }
+
+    resp, err := httpClient.Do(req)
+    defer resp.Body.Close()
+
+    return err == nil
+
+}
+
+func UpdateItemPrice(id string, price float64) (is_updated bool){
+
+    values := map[string]string{"price" : id}
+    json_data, err := json.Marshal(values)
+
+    if err != nil {
+        return false //TODO: Add more detailed error messaging
+    }
+
+    req, err := http.NewRequest("PATCH", BaseURL + "/items/" + id, bytes.NewBuffer(json_data))
+    req.Header.Set("Content-Type", "application/json")
+    if err != nil {
+        return false
+    }
+
+    resp, err := httpClient.Do(req)
+    defer resp.Body.Close()
+
+    return err == nil
+
+}

@@ -1,0 +1,19 @@
+---
+project_name: example
+builds:
+  - env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+nfpms:
+- maintainer: Charlie Stubbs <contact@charlierstubbs.com>
+  description: A simple TUI to interact with a shop API.
+  homepage: https://github.com/charlie-will-software/shop-tui
+  license: GPL3
+  formats:
+  - deb
+  - rpm
+  - apk
